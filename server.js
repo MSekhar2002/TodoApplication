@@ -9,7 +9,7 @@ var cors = require('cors')
 app.use(cors())
 // Database setup
 app.get('/', (req, res) => {
-  return res.status(500).json({ error: 'welcome' });
+  return res.status(200).json({ error: 'welcome' });
 });
 const db = new sqlite3.Database('./todoApp.db', (err) => {
   if (err) {
