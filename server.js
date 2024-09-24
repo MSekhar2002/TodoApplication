@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
 var cors = require('cors')
- 
+const PORT = process.env.PORT || 3001;
 app.use(cors())
 // Database setup
 app.get('/', (req, res) => {
