@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
-const PORT = process.env.PORT || 3001;
 var cors = require('cors')
  
 app.use(cors())
@@ -147,6 +146,4 @@ app.delete('/tasks/:id', authenticateToken, (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+
