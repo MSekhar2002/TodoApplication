@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
-const sqliteCloud = require('sqlite-cloud-client');
+const { Database } = require('@sqlitecloud/drivers');
 
 const app = express();
 var cors = require('cors')
@@ -11,18 +11,12 @@ app.use(cors())
 // Database setup
 app.get( '/' ,(req, res) => res.send( 'Success'));
 
-const connectionString = 'sqlitecloud://cl5r8hernk.sqlite.cloud:8860?apikey=pQ4y76UAY861UcAs31iFBgewbRZyrnU6cbfdJHc1XUY';
 
-const db = new sqliteCloud.Database(connectionString);
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to SQLiteCloud:', err.message);
-  } else {
-    console.log('Connected to SQLiteCloud database.');
-  }
-});
+const db = new Database("sqlitecloud://cl5r8hernk.sqlite.cloud:8860?apikey=pQ4y76UAY861UcAs31iFBgewbRZyrnU6cbfdJHc1XUY");
+
 // Create users and tasks table if they don't exist
-db.run(`
+db.sql(`
+  USE DATABASE chinook.sqlite; 
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -31,7 +25,7 @@ db.run(`
   )
 `);
 
-db.run(`
+db.sql(`
   CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     title TEXT,
@@ -64,7 +58,7 @@ app.post('/signup', async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const id = uuidv4();
 
-  db.run('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], (err) => {
+  db.sql('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], (err) => {
     if (err) return res.status(400).json({ error: 'Email already exists' });
 
     const token = jwt.sign({ id, name, email }, JWT_SECRET);
@@ -99,7 +93,7 @@ app.patch('/profile', authenticateToken, (req, res) => {
   const { name, email, password } = req.body;
   const hashedPassword = password ? bcrypt.hashSync(password, 10) : undefined;
 
-  db.run(
+  db.sql(
     `UPDATE users SET name = ?, email = ?, password = COALESCE(?, password) WHERE id = ?`,
     [name, email, hashedPassword, req.user.id],
     (err) => {
@@ -114,7 +108,7 @@ app.post('/tasks', authenticateToken, (req, res) => {
   const { title, status } = req.body;
   const id = uuidv4();
 
-  db.run('INSERT INTO tasks (id, title, status, user_id) VALUES (?, ?, ?, ?)', [id, title, status, req.user.id], (err) => {
+  db.sql('INSERT INTO tasks (id, title, status, user_id) VALUES (?, ?, ?, ?)', [id, title, status, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to create task' });
     res.json({ id, title, status });
   });
@@ -133,7 +127,7 @@ app.patch('/tasks/:id', authenticateToken, (req, res) => {
   const { status } = req.body;
   const { id } = req.params;
 
-  db.run('UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?', [status, id, req.user.id], (err) => {
+  db.sql('UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?', [status, id, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to update task' });
     res.json({ message: 'Task updated successfully' });
   });
@@ -143,7 +137,7 @@ app.patch('/tasks/:id', authenticateToken, (req, res) => {
 app.delete('/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
 
-  db.run('DELETE FROM tasks WHERE id = ? AND user_id = ?', [id, req.user.id], (err) => {
+  db.sql('DELETE FROM tasks WHERE id = ? AND user_id = ?', [id, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to delete task' });
     res.json({ message: 'Task deleted successfully' });
   });
