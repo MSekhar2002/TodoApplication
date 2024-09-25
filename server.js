@@ -5,12 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
 var cors = require('cors')
-const PORT = process.env.PORT || 3001;
 app.use(cors())
 // Database setup
-app.get('/', (req, res) => {
-  return res.status(200).json({ error: 'welcome' });
-});
+app.get( '/' ,(req, res) => res.send( 'Success'));
 const db = new sqlite3.Database('./todoApp.db', (err) => {
   if (err) {
     console.error(err.message);
@@ -146,6 +143,5 @@ app.delete('/tasks/:id', authenticateToken, (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+module.exports = app;
+
