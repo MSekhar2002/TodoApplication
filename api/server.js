@@ -14,10 +14,9 @@ app.get( '/' ,(req, res) => res.send( 'Success'));
 
 
 const db = new Database("sqlitecloud://cl5r8hernk.sqlite.cloud:8860?apikey=pQ4y76UAY861UcAs31iFBgewbRZyrnU6cbfdJHc1XUY");
+db.sql(`USE DATABASE chinook.sqlite`);
 
-// Create users and tasks table if they don't exist
 db.sql(`
-  USE DATABASE chinook.sqlite; 
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT,
