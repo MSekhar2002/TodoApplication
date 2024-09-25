@@ -3,18 +3,24 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
+const sqliteCloud = require('sqlite-cloud-client');
+
 const app = express();
 var cors = require('cors')
 app.use(cors())
 // Database setup
 app.get( '/' ,(req, res) => res.send( 'Success'));
-const db = new sqlite3.Database('./todoApp.db', (err) => {
-  if (err) {
-    console.error(err.message);
-  }
-  console.log('Connected to SQLite database.');
-});
 
+const connectionString = 'sqlitecloud://cl5r8hernk.sqlite.cloud:8860?apikey=pQ4y76UAY861UcAs31iFBgewbRZyrnU6cbfdJHc1XUY';
+
+const db = new sqliteCloud.Database(connectionString);
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to SQLiteCloud:', err.message);
+  } else {
+    console.log('Connected to SQLiteCloud database.');
+  }
+});
 // Create users and tasks table if they don't exist
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
