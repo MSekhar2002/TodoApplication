@@ -13,7 +13,7 @@ app.use(cors())
 app.get( '/' ,(req, res) => res.send( 'Success'));
 
 
-const db = new Database("sqlitecloud://cl5r8hernk.sqlite.cloud:8860?apikey=pQ4y76UAY861UcAs31iFBgewbRZyrnU6cbfdJHc1XUY");
+const db = new Database("sqlitecloud://cak1aypgnz.sqlite.cloud:8860?apikey=xEzZdjcRhLlOXfNvYbaObcm6blYK6l8GfxCbsHJrb2k");
 db.sql(`USE DATABASE chinook.sqlite`);
 
 db.sql(`
