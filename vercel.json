@@ -11,6 +11,12 @@
         "src": "/(.*)",
         "dest": "/api/server.js"
       }
-    ]
+    ],
+    "functions": {
+      "api/*.js": {
+        "memory": 1024, 
+        "maxDuration": 30 
+      }
+    }
   }
   
