@@ -3,20 +3,24 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
-const { Database } = require('@sqlitecloud/drivers');
-const PORT = process.env.PORT || 3001;
-
 const app = express();
+const PORT = process.env.PORT || 3001;
 var cors = require('cors')
+ 
 app.use(cors())
 // Database setup
-app.get( '/' ,(req, res) => res.send( 'Success'));
+app.get('/', (req, res) => {
+  return res.status(500).json({ error: 'welcome' });
+});
+const db = new sqlite3.Database('./todoApp.db', (err) => {
+  if (err) {
+    console.error(err.message);
+  }
+  console.log('Connected to SQLite database.');
+});
 
-
-const db = new Database("sqlitecloud://cak1aypgnz.sqlite.cloud:8860?apikey=xEzZdjcRhLlOXfNvYbaObcm6blYK6l8GfxCbsHJrb2k");
-db.sql(`USE DATABASE chinook.sqlite`);
-
-db.sql(`
+// Create users and tasks table if they don't exist
+db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -25,7 +29,7 @@ db.sql(`
   )
 `);
 
-db.sql(`
+db.run(`
   CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     title TEXT,
@@ -58,12 +62,12 @@ app.post('/signup', async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const id = uuidv4();
 
-  db.run('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], function (err) {
+  db.run('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], (err) => {
     if (err) return res.status(400).json({ error: 'Email already exists' });
+
     const token = jwt.sign({ id, name, email }, JWT_SECRET);
     res.json({ token });
-});
-
+  });
 });
 
 // User Login
@@ -89,30 +93,19 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 // Update user profile
-app.patch('/profile', authenticateToken, async (req, res) => {
+app.patch('/profile', authenticateToken, (req, res) => {
   const { name, email, password } = req.body;
-  let sqlQuery;
-  let params;
+  const hashedPassword = password ? bcrypt.hashSync(password, 10) : undefined;
 
-  if (password) {
-    // If password is provided, hash it and include in the update
-    const hashedPassword = await bcrypt.hash(password, 10);
-    sqlQuery = `UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?`;
-    params = [name, email, hashedPassword, req.user.id];
-  } else {
-    // If password is not provided, update only name and email
-    sqlQuery = `UPDATE users SET name = ?, email = ? WHERE id = ?`;
-    params = [name, email, req.user.id];
-  }
-
-  db.run(sqlQuery, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to update profile' });
+  db.run(
+    `UPDATE users SET name = ?, email = ?, password = COALESCE(?, password) WHERE id = ?`,
+    [name, email, hashedPassword, req.user.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: 'Failed to update profile' });
+      res.json({ message: 'Profile updated successfully' });
     }
-    res.json({ message: 'Profile updated successfully' });
-  });
+  );
 });
-
 
 // Create new task
 app.post('/tasks', authenticateToken, (req, res) => {
@@ -157,6 +150,3 @@ app.delete('/tasks/:id', authenticateToken, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-module.exports = app;
-
