@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
 const { Database } = require('@sqlitecloud/drivers');
+const PORT = process.env.PORT || 3001;
 
 const app = express();
 var cors = require('cors')
@@ -58,12 +59,12 @@ app.post('/signup', async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const id = uuidv4();
 
-  db.sql('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], (err) => {
+  db.run('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [id, name, email, hashedPassword], function (err) {
     if (err) return res.status(400).json({ error: 'Email already exists' });
-
     const token = jwt.sign({ id, name, email }, JWT_SECRET);
     res.json({ token });
-  });
+});
+
 });
 
 // User Login
@@ -89,26 +90,37 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 // Update user profile
-app.patch('/profile', authenticateToken, (req, res) => {
+app.patch('/profile', authenticateToken, async (req, res) => {
   const { name, email, password } = req.body;
-  const hashedPassword = password ? bcrypt.hashSync(password, 10) : undefined;
+  let sqlQuery;
+  let params;
 
-  db.sql(
-    `UPDATE users SET name = ?, email = ?, password = COALESCE(?, password) WHERE id = ?`,
-    [name, email, hashedPassword, req.user.id],
-    (err) => {
-      if (err) return res.status(500).json({ error: 'Failed to update profile' });
-      res.json({ message: 'Profile updated successfully' });
+  if (password) {
+    // If password is provided, hash it and include in the update
+    const hashedPassword = await bcrypt.hash(password, 10);
+    sqlQuery = `UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?`;
+    params = [name, email, hashedPassword, req.user.id];
+  } else {
+    // If password is not provided, update only name and email
+    sqlQuery = `UPDATE users SET name = ?, email = ? WHERE id = ?`;
+    params = [name, email, req.user.id];
+  }
+
+  db.run(sqlQuery, params, function (err) {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to update profile' });
     }
-  );
+    res.json({ message: 'Profile updated successfully' });
+  });
 });
+
 
 // Create new task
 app.post('/tasks', authenticateToken, (req, res) => {
   const { title, status } = req.body;
   const id = uuidv4();
 
-  db.sql('INSERT INTO tasks (id, title, status, user_id) VALUES (?, ?, ?, ?)', [id, title, status, req.user.id], (err) => {
+  db.run('INSERT INTO tasks (id, title, status, user_id) VALUES (?, ?, ?, ?)', [id, title, status, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to create task' });
     res.json({ id, title, status });
   });
@@ -127,7 +139,7 @@ app.patch('/tasks/:id', authenticateToken, (req, res) => {
   const { status } = req.body;
   const { id } = req.params;
 
-  db.sql('UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?', [status, id, req.user.id], (err) => {
+  db.run('UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?', [status, id, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to update task' });
     res.json({ message: 'Task updated successfully' });
   });
@@ -137,10 +149,14 @@ app.patch('/tasks/:id', authenticateToken, (req, res) => {
 app.delete('/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
 
-  db.sql('DELETE FROM tasks WHERE id = ? AND user_id = ?', [id, req.user.id], (err) => {
+  db.run('DELETE FROM tasks WHERE id = ? AND user_id = ?', [id, req.user.id], (err) => {
     if (err) return res.status(500).json({ error: 'Failed to delete task' });
     res.json({ message: 'Task deleted successfully' });
   });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 module.exports = app;
